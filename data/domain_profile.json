@@ -1,0 +1,26 @@
+{
+  "hpi.symptom": [
+    "snomed"
+  ],
+  "pmh.condition": [
+    "snomed"
+  ],
+  "procedure": [
+    "snomed"
+  ],
+  "lab.test": [
+    "loinc"
+  ],
+  "vital.sign": [
+    "loinc"
+  ],
+  "meds.drug": [
+    "rxnorm"
+  ],
+  "allergy.substance": [
+    "snomed"
+  ],
+  "immunization": [
+    "cvx"
+  ]
+}

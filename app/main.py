@@ -91,6 +91,30 @@ def _data_hash() -> str:
         pass
     return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
 
+def pick_best_loinc(loincs: list[dict], query: str) -> dict | None:
+    """
+    Choose a single LOINC to represent the lab when no SNOMED is present.
+    Rules:
+      1) Drop 'Deprecated' displays
+      2) Prefer 'in Blood' for hemoglobin (718-7 is the canonical one)
+      3) Otherwise take the first remaining candidate
+    """
+    if not loincs:
+        return None
+    q = (query or "").lower()
+    filt = [l for l in loincs if "display" in l and "deprecated" not in l["display"].lower()]
+    if not filt:
+        filt = loincs[:]  # fall back if every hit is deprecated
+
+    # Special-case hemoglobin: prefer Blood
+    if "hemoglobin" in q:
+        for l in filt:
+            if " in blood" in l["display"].lower():
+                return l
+
+    return filt[0]
+
+
 
 # -----------------------------------------------------------------------------
 # Dataset caches (SNOMED/LOINC)
@@ -159,6 +183,34 @@ def snomed_candidates(q: str, top_k: int = 8, score_cutoff: int = 60) -> List[Di
             out.append({"code": rec.get("code"), "display": display, "score": int(best)})
     out.sort(key=lambda x: x["score"], reverse=True)
     return out[: max(1, int(top_k))]
+
+def pick_best_loinc(loincs, query):
+    """
+    Choose a single LOINC to represent the lab when no SNOMED is present.
+    Rules:
+      1) Drop 'Deprecated' displays
+      2) Prefer 'in Blood' for hemoglobin (718-7 is canonical)
+      3) Otherwise take the first remaining candidate
+    """
+    if not loincs:
+        return None
+    q = (query or "").lower()
+    # remove deprecated
+    filt = [l for l in loincs if isinstance(l, dict)
+            and str(l.get("display", "")).strip()
+            and "deprecated" not in str(l.get("display", "")).lower()]
+    if not filt:
+        filt = [l for l in loincs if isinstance(l, dict)]
+
+    # special-case hemoglobin
+    if "hemoglobin" in q:
+        for l in filt:
+            disp = str(l.get("display", "")).lower()
+            if " in blood" in disp or str(l.get("code")) == "718-7":
+                return l
+
+    return filt[0] if filt else None
+
 
 # -----------------------------------------------------------------------------
 # LOINC candidates
@@ -349,7 +401,32 @@ def lookup(
             "snomed": snomed_candidates(q, tech_top_k, tech_score_cutoff),
             "loinc": loinc_candidates(q, tech_top_k, tech_score_cutoff),
         }
+
+    # --- LOINC-only fallback: if we have no results (no SNOMED),
+    # surface one sensible LOINC so Patient/Practitioner views aren't blank.
+    if not resp["results"]:
+        loinc_tech = (resp.get("technical", {}) or {}).get("loinc") if include_technical else \
+                    loinc_candidates(q, tech_top_k, tech_score_cutoff)
+        best = pick_best_loinc(loinc_tech or [], q)
+        if best:
+            entry = {
+                "term": q,
+                "aliases": [],
+                # provide both object and flattened fields for UI compatibility
+                "loinc": {"code": best.get("code"), "display": best.get("display")},
+                "loinc_code": best.get("code"),
+                "loinc_display": best.get("display"),
+                "snomed": None,
+                "score": 100,
+                "patient_view": f"{q} ({best.get('display')})",
+                "practitioner_view": best.get("display"),
+                "practitioner_options": None,  # lab-only: no SNOMED picker
+            }
+            resp["results"] = [entry]
+            resp["count"] = 1
+
     return resp
+
 
 # -----------------------------------------------------------------------------
 # Learn / Commit / Unlearn

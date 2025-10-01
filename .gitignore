@@ -1,16 +1,13 @@
-# secrets & local env
 .env
-*.lock
 data/layman_learned.json
 data/logs/
-
-# builds / caches
+data/*.csv
+data/*.tsv
+local_archive/
 frontend/build/
 node_modules/
 __pycache__/
 *.pyc
 .venv/
-
-# OS cruft
 .DS_Store
 Thumbs.db
