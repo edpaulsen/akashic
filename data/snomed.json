@@ -1,17 +1,39 @@
-﻿{
+{
   "watery eyes": {
     "code": "231834007",
     "display": "Epiphora",
-    "aliases": ["tearing", "tears", "watering eyes", "runny eyes"]
+    "aliases": [
+      "tearing",
+      "tears",
+      "watering eyes",
+      "runny eyes",
+      "eye tearing",
+      "eye watering",
+      "watery eye"
+    ]
   },
   "heart attack": {
     "code": "22298006",
     "display": "Myocardial infarction",
-    "aliases": ["mi", "myocardial infarction"]
+    "aliases": [
+      "heart attack",
+      "mi",
+      "myocardial infarction",
+      "heart-attack",
+      "cardiac infarction"
+    ]
   },
   "high blood pressure": {
     "code": "38341003",
     "display": "Hypertension",
-    "aliases": ["htn", "high bp", "elevated blood pressure"]
+    "aliases": [
+      "high blood pressure",
+      "hypertension",
+      "htn",
+      "high bp",
+      "bp high",
+      "elevated blood pressure",
+      "raised blood pressure"
+    ]
   }
 }
