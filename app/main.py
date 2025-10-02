@@ -8,6 +8,8 @@ from app.learning import learn_selection
 from app.extensions.canonical_loinc import choose as choose_loinc
 from app.data.snomed_loader import get_snomed_db  # reads data/snomed.json
 from app.data.loinc_loader import normalize_loinc_term
+import os, json
+
 
 
 app = FastAPI(title="Akashic Lookup API")
@@ -20,6 +22,51 @@ def root():
 @app.get("/api/healthz")
 def healthz():
     return {"ok": True}
+
+
+@app.get("/readyz")
+def readyz():
+    # counts (never crash)
+    try:
+        db, _ = get_snomed_db()
+        snomed_count = len(db)
+    except Exception:
+        snomed_count = -1
+    try:
+        aliases_path = os.getenv("LOINC_ALIASES_JSON", "data/loinc_aliases.json")
+        with open(aliases_path, "r", encoding="utf-8-sig") as f:
+            loinc_aliases = json.load(f)
+        loinc_alias_count = len(loinc_aliases) if isinstance(loinc_aliases, dict) else 0
+    except Exception:
+        loinc_alias_count = -1
+        aliases_path = os.getenv("LOINC_ALIASES_JSON", "data/loinc_aliases.json")
+    try:
+        canon_path = os.getenv("LOINC_CANONICAL_JSON", "data/loinc_canonical.json")
+        with open(canon_path, "r", encoding="utf-8-sig") as f:
+            loinc_canon = json.load(f)
+        loinc_canon_count = len(loinc_canon) if isinstance(loinc_canon, dict) else 0
+    except Exception:
+        loinc_canon_count = -1
+        canon_path = os.getenv("LOINC_CANONICAL_JSON", "data/loinc_canonical.json")
+    return {
+        "ok": True,
+        "counts": {
+            "snomed_entries": snomed_count,
+            "loinc_aliases": loinc_alias_count,
+            "loinc_canonicals": loinc_canon_count
+        },
+        "paths": {
+            "snomed_json": os.getenv("SNOMED_JSON", "data/snomed.json"),
+            "loinc_aliases_json": aliases_path,
+            "loinc_canonical_json": canon_path
+        }
+    }
+
+@app.get("/version")
+def version():
+    sha = os.getenv("GITHUB_SHA") or os.getenv("COMMIT_SHA") or "local"
+    return {"version": sha}
+
 
 class LookupResult(BaseModel):
     term: str
