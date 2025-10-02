@@ -86,6 +86,10 @@ def _data_hash() -> str:
             parts.append(_sha256_file(SNOMED_JSON))
         if LOINC_JSON.exists():
             parts.append(_sha256_file(LOINC_JSON))
+        # include domain profile in the version hash (same folder as SNOMED/LOINC)
+        dp = SNOMED_JSON.parent / "domain_profile.json"
+        if dp.exists():
+            parts.append(_sha256_file(dp))
     except Exception:
         # keep it resilient; empty parts -> stable hash of empty string
         pass
