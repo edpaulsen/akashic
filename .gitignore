@@ -11,3 +11,32 @@ __pycache__/
 .venv/
 .DS_Store
 Thumbs.db
+# env & backups
+.env
+.env.*
+*.bak
+
+# local data & logs
+data/layman_learned.json
+data/logs/
+data/*.csv
+data/*.tsv
+data/loinc-save.json
+
+# build / deps / caches
+frontend/build/
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+
+# archives & large artifacts
+*.zip
+*.xlsx
+
+# misc local scratch
+frontend/payload.json
+frontend/layman_learned.download.json
+layman_learned.download.json
+index.html
+get-pip.py
