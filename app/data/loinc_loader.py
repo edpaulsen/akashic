@@ -8,15 +8,13 @@ def _norm(s: str) -> str:
 
 @lru_cache(maxsize=1)
 def _load_alias_map() -> Dict[str, str]:
-    """
-    Load alias -> canonical-key map from data/loinc_aliases.json.
-    Returns {} if file missing/invalid.
-    """
+    """Load alias -> canonical-key from data/loinc_aliases.json.
+    Accepts UTF-8 with or without BOM; returns {} on problems."""
     path = os.getenv("LOINC_ALIASES_JSON", "data/loinc_aliases.json")
     if not os.path.exists(path):
         return {}
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8-sig") as f:  # <-- handles BOM
             raw = json.load(f)
         if not isinstance(raw, dict):
             return {}
@@ -29,10 +27,7 @@ def _load_alias_map() -> Dict[str, str]:
         return {}
 
 def normalize_loinc_term(term: str) -> str:
-    """
-    Map an input term/synonym to the canonical key used by canonical_loinc.
-    If no alias match exists, returns the input term lowercased.
-    """
+    """Map input term/synonym to canonical key; if no match, return normalized input."""
     alias_map = _load_alias_map()
     t = _norm(term)
     return alias_map.get(t, t)
