@@ -1,3 +1,17 @@
 {
-
+  "watery eyes": {
+    "code": "231834007",
+    "display": "Epiphora",
+    "aliases": ["tearing", "tears", "watering eyes", "runny eyes"]
+  },
+  "heart attack": {
+    "code": "22298006",
+    "display": "Myocardial infarction",
+    "aliases": ["mi", "myocardial infarction"]
+  },
+  "high blood pressure": {
+    "code": "38341003",
+    "display": "Hypertension",
+    "aliases": ["htn", "high bp", "elevated blood pressure"]
+  }
 }
