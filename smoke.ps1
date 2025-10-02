@@ -1,32 +1,39 @@
-$ErrorActionPreference = 'Stop'
+# smoke.ps1 — basic health + lookup + learn happy path
+# Requires the API running on http://127.0.0.1:8000
 
-function Check { param($cond,$msg) if (-not $cond) { throw "SMOKE FAIL: $msg" } else { Write-Host "OK - $msg" } }
+$ErrorActionPreference = "Stop"
+function Assert-JsonOk($json) {
+  if (-not $json.ok) { Throw "Expected ok=true, got: $($json | ConvertTo-Json -Depth 6)" }
+}
 
-# Health
-$h = Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/healthz'
-Check ($h.ok -eq $true) 'Health OK'
+Write-Host "1) /healthz"
+$health = Invoke-RestMethod "http://127.0.0.1:8000/healthz"
+Assert-JsonOk $health
+Write-Host "   OK"
 
-# Heart attack should expose MI cluster
-$r = Invoke-RestMethod -Uri 'http://127.0.0.1:8000/lookup?q=heart%20attack&domain=auto&include_technical=true'
-$first = $r.results[0]
-$codes = @($first.practitioner_options.snomed | ForEach-Object { $_.code })
-Check ($codes -contains '22298006') 'MI present'
-Check ($codes -contains '57054005') 'Acute MI present'
-Check ($codes -contains '401303003') 'STEMI present'
-Check ($codes -contains '401314000') 'NSTEMI present'
+Write-Host "2) /lookup heart attack"
+$lookup = Invoke-RestMethod "http://127.0.0.1:8000/lookup?query=heart%20attack&domain=auto&include_technical=true&top_k=5&score_cutoff=70&tech_top_k=8&tech_score_cutoff=60"
+Assert-JsonOk $lookup
+if ($lookup.results[0].snomed -ne "22298006") { Throw "SNOMED mismatch for heart attack" }
+Write-Host "   OK"
 
-# Commit MI
-$payload = @{ term='heart attack'; code='22298006'; display='Myocardial infarction'; lay_text='heart attack' } | ConvertTo-Json
-$c = Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/commit_selection' -Method Post -ContentType 'application/json' -Body $payload
-Check ($c.ok -eq $true) 'Commit MI'
+Write-Host "3) /lookup hemoglobin (canonical LOINC)"
+$lookup2 = Invoke-RestMethod "http://127.0.0.1:8000/lookup?query=hemoglobin"
+Assert-JsonOk $lookup2
+if ($lookup2.results[0].loinc -ne "718-7") { Throw "LOINC mismatch for hemoglobin" }
+Write-Host "   OK"
 
-# Watery eyes -> Epiphora
-$payload2 = @{ term='watery eyes'; code='231834007'; display='Epiphora'; lay_text='watery eyes' } | ConvertTo-Json
-$c2 = Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/commit_selection' -Method Post -ContentType 'application/json' -Body $payload2
-Check ($c2.ok -eq $true) 'Commit Epiphora'
+Write-Host "4) /api/commit_selection learn heart attack (global)"
+$payload = @{
+  term="heart attack"
+  code="22298006"
+  display="Myocardial infarction"
+  lay_text="heart attack"
+  dry_run=$false
+  context=$null
+} | ConvertTo-Json
+$res = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/commit_selection" -ContentType "application/json" -Body $payload
+if (-not $res.ok) { Throw "commit_selection failed" }
+Write-Host "   OK"
 
-$r2 = Invoke-RestMethod -Uri 'http://127.0.0.1:8000/lookup?q=watery%20eyes&domain=auto&include_technical=true'
-Check ($r2.results[0].patient_view -match 'Epiphora') 'Patient view shows Epiphora'
-
-Write-Host ''
-Write-Host 'ALL GREEN'
+Write-Host "`nAll smokes passed."

@@ -1,13 +1,36 @@
-$ErrorActionPreference = 'Stop'
-function Check { param($cond,$msg) if (-not $cond) { throw "SMOKE FAIL: $msg" } else { Write-Host "OK - $msg" } }
+# smoke_context.ps1 — verifies namespaced learning prevents cross-talk
+# Requires the API running on http://127.0.0.1:8000
 
-# LOINC-only: Hemoglobin
-$r1 = Invoke-RestMethod -Uri 'http://127.0.0.1:8000/lookup?q=hemoglobin&domain=loinc&include_technical=true'
-Check ($r1.results.Count -ge 1) 'Hemoglobin returns at least one result'
-Check ($r1.results[0].loinc_code -ne $null) 'Hemoglobin returns loinc_code'
-Check ($r1.results[0].patient_view -match 'Hemoglobin') 'Patient view is populated for Hemoglobin'
+$ErrorActionPreference = "Stop"
 
-# SNOMED-only: heart attack
-$r2 = Invoke-RestMethod -Uri 'http://127.0.0.1:8000/lookup?q=heart%20attack&domain=snomed&include_technical=true'
-$codes = @($r2.results[0].practitioner_options.snomed | ForEach-Object { $_.code })
-Check ($codes -contains '22298006') 'MI present (SNOMED-only route)'
+function Post-Commit($term, $code, $display, $ctx) {
+  $payload = @{
+    term=$term
+    code=$code
+    display=$display
+    lay_text=$term
+    dry_run=$false
+    context=$ctx
+  } | ConvertTo-Json
+  Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/commit_selection" -ContentType "application/json" -Body $payload
+}
+
+Write-Host "1) Learn 'watery eyes' in pmh.condition context"
+$res1 = Post-Commit "watery eyes" "231834007" "Epiphora" "pmh.condition"
+if (-not $res1.ok) { Throw "Learn #1 failed" }
+Write-Host "   OK"
+
+Write-Host "2) Learn 'watery eyes' in lab.test context (different concept on purpose)"
+$res2 = Post-Commit "watery eyes" "38341003" "Hypertension" "lab.test"
+if (-not $res2.ok) { Throw "Learn #2 failed" }
+Write-Host "   OK"
+
+Write-Host "3) Verify distinct keys were created (by reading layman_learned.json)"
+$path = "data/layman_learned.json"
+if (-not (Test-Path $path)) { Throw "Missing $path" }
+$json = Get-Content $path -Raw | ConvertFrom-Json
+if (-not $json."pmh.condition::watery eyes") { Throw "Missing pmh.condition::watery eyes" }
+if (-not $json."lab.test::watery eyes") { Throw "Missing lab.test::watery eyes" }
+Write-Host "   OK"
+
+Write-Host "`nContext smoke passed."

@@ -1,3 +1,54 @@
+October 1
+Love it. Here’s a tight end-of-day wrap and a pick-your-next-move menu.
+
+### Quick end-of-day checklist
+
+* Run both smokes one last time:
+
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\smoke.ps1
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\smoke_context.ps1
+  ```
+* Tag is already set. Optional local backup zip:
+
+  ```powershell
+  Compress-Archive -Path * -DestinationPath .\repo-backup-pre-aws-context-green.zip -Force
+  ```
+
+### Pick what you want to do next (I’ll give surgical patches)
+
+1. **Namespaced learning**
+   Keep saved choices separate per field (e.g., `lab.test::hemoglobin` vs `pmh.condition::hemoglobin`).
+   *Result:* no cross-talk between labs, problems, procedures.
+
+2. **Canonical LOINC selector**
+   Small table for common labs (e.g., Hemoglobin → **718-7**, Creatinine → **2160-0**) so your fallback always picks the gold standard when multiple 100s exist.
+
+3. **AWS cutover (minimal friction)**
+   Two paths:
+
+   * **Lambda container**: package FastAPI in a container, deploy via ECR + API Gateway.
+   * **ECS Fargate**: run the same container behind an ALB.
+     I’ll hand you a copy-paste Terraform or AWS CLI plan referencing this repo layout.
+
+4. **CI smoke**
+   Add a GitHub Action that runs a lightweight backend boot + `smoke.ps1` equivalent (Linux) on every commit, so “green stays green”.
+
+Reply with **1, 2, 3, or 4** (or a combo), and I’ll drop the exact “XXX → YYY” changes and files.
+
+
+Awesome. Repo’s in a good place. Sleep well, Eddie 😴
+
+When you’re back tomorrow, we can pick up with any of these:
+
+1. Namespaced learning (`context::term`) – tiny patch.
+2. Canonical LOINC chooser (e.g., Hemoglobin → 718-7).
+3. AWS cutover plan (Lambda container or ECS Fargate) using this repo.
+
+Just say **1**, **2**, or **3** and I’ll drop precise, copy-paste steps.
+
+
+
 Sept 30
 Got it. Here’s the **tight plan for tomorrow**—no code walls, just the exact order of operations.
 
