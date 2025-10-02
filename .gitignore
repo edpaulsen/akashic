@@ -40,3 +40,13 @@ frontend/layman_learned.download.json
 layman_learned.download.json
 index.html
 get-pip.py
+# archives / legacy parked outside Git
+local_archive/
+LoincTable/
+LoincTableCore/
+
+# notes & local docs we moved
+MAIN_*_INTEGRATION.txt
+/pack*lock.json
+
+# (the rest of your ignores already set earlier)
