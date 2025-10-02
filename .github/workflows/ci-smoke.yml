@@ -24,17 +24,32 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
 
+      - name: Sanity imports
+        run: |
+          python - <<'PY'
+          import importlib
+          for m in ("fastapi","uvicorn","pydantic"):
+              importlib.import_module(m)
+          import app, app.main
+          print("Imports OK")
+          PY
+
       - name: Start API
         run: |
           nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > uvicorn.log 2>&1 &
           for i in {1..30}; do
-            if curl -sSf http://127.0.0.1:8000/healthz > /dev/null; then
+            if curl -sSf http://127.0.0.1:8000/healthz >/dev/null; then
               echo "API up"
               exit 0
             fi
             sleep 1
           done
           echo "API failed to start"; cat uvicorn.log; exit 1
+
+      - name: Readyz gate
+        run: |
+          curl -sSf "http://127.0.0.1:8000/readyz" | jq -e '.ok == true' >/dev/null
+          curl -sSf "http://127.0.0.1:8000/readyz" | jq -e '.counts.snomed_entries > 0 and .counts.loinc_aliases > 0 and .counts.loinc_canonicals > 0' >/dev/null
 
       - name: LOINC alias checks
         run: |
